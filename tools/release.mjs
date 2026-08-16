@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const projectRoot = path.resolve(here, "..");
 const outputRoot = path.join(projectRoot, "release-out", "public");
-const excludedTopLevel = new Set([".git", ".omp", ".planning", ".potassium-rollback", "archive", "graphify-out", "node_modules", "release-out", "workspace"]);
+const excludedTopLevel = new Set([".git", ".github", ".omp", ".planning", ".potassium-rollback", "archive", "graphify-out", "node_modules", "release-out", "workspace"]);
 const excludedFiles = new Set(["ARCHITECTURE.md", "OPERATIONS.md", "DEPLOY_STATE.json", "LIVE_STATE.json", "HANDOFF.md", "start-omp.ps1", "potassium-mcp/config.json"]);
 const excludedSuffixes = [".log", ".tmp", ".cache", ".ndjson"];
 

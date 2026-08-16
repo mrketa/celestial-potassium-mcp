@@ -1,0 +1,96 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - name: Check out tagged source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: potassium-mcp/package-lock.json
+
+      - name: Verify tag and project versions
+        shell: pwsh
+        run: |
+          $packageVersion = (Get-Content potassium-mcp/package.json -Raw | ConvertFrom-Json).version
+          $fileVersion = (Get-Content version.txt -Raw).Trim()
+          $expectedTag = "v$packageVersion"
+          if ($fileVersion -ne $packageVersion) {
+            throw "version.txt ($fileVersion) does not match package.json ($packageVersion)"
+          }
+          if ("${{ github.ref_name }}" -ne $expectedTag) {
+            throw "Tag ${{ github.ref_name }} does not match $expectedTag"
+          }
+
+      - name: Install locked dependencies
+        run: npm ci --prefix potassium-mcp
+
+      - name: Run tests
+        run: npm --prefix potassium-mcp test
+
+      - name: Build verified public package
+        run: |
+          npm --prefix potassium-mcp run release:check
+          npm --prefix potassium-mcp run release:pack
+
+      - name: Create ZIP and checksum
+        id: assets
+        shell: pwsh
+        run: |
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $tag = "${{ github.ref_name }}"
+          $archiveName = "celestial-potassium-mcp-$tag-windows.zip"
+          $archivePath = Join-Path $PWD "release-out/$archiveName"
+          [System.IO.Compression.ZipFile]::CreateFromDirectory(
+            (Join-Path $PWD "release-out/public"),
+            $archivePath,
+            [System.IO.Compression.CompressionLevel]::Optimal,
+            $false
+          )
+          $checksumName = "$archiveName.sha256"
+          $hash = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
+          [System.IO.File]::WriteAllText(
+            (Join-Path $PWD "release-out/$checksumName"),
+            "$hash  $archiveName`n",
+            [System.Text.UTF8Encoding]::new($false)
+          )
+          Copy-Item release-out/public/RELEASE-EVIDENCE.json release-out/RELEASE-EVIDENCE.json
+          "archive=$archiveName" >> $env:GITHUB_OUTPUT
+          "checksum=$checksumName" >> $env:GITHUB_OUTPUT
+
+      - name: Publish GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $version = $tag.TrimStart("v")
+          $arguments = @(
+            "release", "create", $tag,
+            "release-out/${{ steps.assets.outputs.archive }}",
+            "release-out/${{ steps.assets.outputs.checksum }}",
+            "release-out/RELEASE-EVIDENCE.json",
+            "--verify-tag",
+            "--title", "Potassium MCP $version",
+            "--generate-notes"
+          )
+          if ($version.Contains("-")) { $arguments += "--prerelease" }
+          & gh @arguments
+          if ($LASTEXITCODE -ne 0) { throw "gh release create failed" }

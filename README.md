@@ -6,6 +6,23 @@
 
 Gameplay automation is intentionally not included: there are no routes, collectors, movement, teleports, remotes, input actions, rewards, or gameplay runtime controls. The bridge does not expose arbitrary filesystem, source, bytecode, remote, input, teleport, or hook access.
 
+## Recommended install from GitHub Releases
+
+1. Download the `celestial-potassium-mcp-v*-windows.zip` and matching `.sha256` file from [GitHub Releases](https://github.com/mrketa/celestial-potassium-mcp/releases).
+2. Verify the download before extracting:
+
+```powershell
+$archive = "celestial-potassium-mcp-v0.7.0-beta.1-windows.zip"
+$expected = (Get-Content "$archive.sha256" -Raw).Split()[0]
+$actual = (Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+if ($actual -ne $expected) { throw "Release checksum mismatch" }
+Expand-Archive $archive -DestinationPath .\celestial-potassium-mcp
+Set-Location .\celestial-potassium-mcp
+.\tools\setup.ps1
+```
+
+Each release also includes `RELEASE-EVIDENCE.json` with the byte length and SHA-256 digest of every packaged source file plus the locked dependency inventory.
+
 ## Setup
 
 On Windows, start Potassium once, then run:

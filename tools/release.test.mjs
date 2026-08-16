@@ -26,6 +26,8 @@ test("portableRelative emits separator-stable paths and rejects escapes", () => 
 test("selectPublicFiles accepts precisely manifest-listed regular files", async (t) => {
   const root = await fixture({ "src/main.js": "export const safe = true;\n" });
   t.after(() => rm(root, { recursive: true, force: true }));
+  await mkdir(path.join(root, ".github", "workflows"), { recursive: true });
+  await writeFile(path.join(root, ".github", "workflows", "release.yml"), "name: fixture\n");
   const files = await selectPublicFiles(root);
   assert.deepEqual(files.map(({ path: file }) => file), ["release-manifest.json", "src/main.js"]);
 });
