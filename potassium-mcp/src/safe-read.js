@@ -450,7 +450,6 @@ export async function getAllowedHttps({ url, timeoutMs = DEFAULT_SAFE_TIMEOUT_MS
     controller.abort();
     rejectDeadline(safeError("HTTP request timed out"));
   }, timeout);
-  timer.unref?.();
   let response;
   let bodyHandled = false;
   try {
