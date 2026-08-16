@@ -1,6 +1,6 @@
 # Agent-assisted installation
 
-Give the prompt below to a trusted local coding agent that can run PowerShell and edit your MCP client configuration. The agent must not claim success until it completes the live checks. Installation is Windows-only and requires Potassium plus a compatible executor.
+Give the prompt below to a trusted local coding agent that can run PowerShell and edit your MCP client configuration. The agent must not claim success until it completes the live checks. Installation is Windows-only and requires Potassium as executor.
 
 ## Copy this prompt
 
