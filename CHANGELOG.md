@@ -7,3 +7,4 @@
 - Deployment now transactionally installs only canonical bootstrap and autoexec scripts with byte parity.
 - Simplified configuration, setup, uninstall, doctor, and release contents around the local bridge.
 - Added tag-driven GitHub Releases with a verified Windows ZIP, SHA-256 checksum, release evidence, generated notes, and automatic prerelease classification.
+- Added a copy-ready trusted-agent installation prompt with checksum, MCP registration, restart handoff, and live connection verification requirements.

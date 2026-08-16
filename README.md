@@ -23,6 +23,10 @@ Set-Location .\celestial-potassium-mcp
 
 Each release also includes `RELEASE-EVIDENCE.json` with the byte length and SHA-256 digest of every packaged source file plus the locked dependency inventory.
 
+## Install with a trusted agent
+
+Want a coding agent to complete setup and prove the live connection? Copy the exact prompt from [Agent-assisted installation](docs/AGENT-INSTALL.md). It covers release checksum verification, prerequisites, safe local configuration, MCP host reload, Potassium attachment, and end-to-end tool calls. A successful `doctor` run alone is not a live connection.
+
 ## Setup
 
 On Windows, start Potassium once, then run:
