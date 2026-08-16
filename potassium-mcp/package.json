@@ -1,0 +1,24 @@
+{
+  "name": "celestial-potassium-mcp",
+  "version": "0.7.0-beta.1",
+  "private": true,
+  "type": "module",
+  "description": "Local MCP-to-Potassium WebSocket bridge",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "deploy": "node src/deploy.js",
+    "doctor": "node src/doctor.js",
+    "release:check": "node ../tools/release.mjs check",
+    "release:pack": "node ../tools/release.mjs pack",
+    "test": "node --test --test-concurrency=1"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "ws": "8.21.3",
+    "zod": "4.1.12"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

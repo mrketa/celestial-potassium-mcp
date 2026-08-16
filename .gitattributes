@@ -1,0 +1,19 @@
+# Preserve exact script and manifest bytes in public source releases.
+* text=auto eol=lf
+*.ps1 text eol=crlf
+*.lua text eol=lf
+*.json text eol=lf
+*.mjs text eol=lf
+
+# Local runtime state and credentials never belong in generated archives.
+potassium-mcp/config.json export-ignore
+.omp/ export-ignore
+workspace/ export-ignore
+.planning/ export-ignore
+graphify-out/ export-ignore
+archive/ export-ignore
+release-out/ export-ignore
+DEPLOY_STATE.json export-ignore
+LIVE_STATE.json export-ignore
+HANDOFF.md export-ignore
+AGENTS.md export-ignore

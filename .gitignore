@@ -1,0 +1,33 @@
+# Local MCP credentials and machine-specific configuration
+potassium-mcp/config.json
+potassium-mcp/.potassium-mcp-token
+.omp/mcp.json
+.omp/*.local.json
+
+# Project-managed runtime and deployment state
+DEPLOY_STATE.json
+LIVE_STATE.json
+workspace/
+.potassium-mcp-token
+autoexec/
+
+.potassium-rollback/
+# Diagnostics, captures, caches, and generated analysis
+*.log
+*.tmp
+*.cache
+*.ndjson
+graphify-out/
+.planning/
+archive/
+release-out/
+node_modules/
+potassium-mcp/node_modules/
+
+# Local operator notes and ad-hoc scripts
+HANDOFF.md
+start-omp.ps1
+/ARCHITECTURE.md
+/OPERATIONS.md
+scripts/*.txt
+scripts/matcha_publish/
