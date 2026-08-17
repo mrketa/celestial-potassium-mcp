@@ -56,10 +56,11 @@ jobs:
 
       - name: Pack and inspect npm tarball
         shell: pwsh
+        working-directory: potassium-mcp
         run: |
-          $pack = npm --prefix potassium-mcp pack --json | ConvertFrom-Json
+          $pack = npm pack --json | ConvertFrom-Json
           if ($pack.Count -ne 1) { throw "npm pack did not produce exactly one tarball" }
-          $tarball = Join-Path $PWD "potassium-mcp/$($pack[0].filename)"
+          $tarball = Join-Path $PWD $pack[0].filename
           if (-not (Test-Path -LiteralPath $tarball)) { throw "npm pack tarball was not created" }
           $contents = @(& tar -tf $tarball)
           $required = @(
