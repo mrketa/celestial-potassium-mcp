@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import test from "node:test";
 
-const autoexecPath = resolve("../scripts/potassium_mcp_autoexec.lua");
-const bootstrapPath = resolve("../scripts/potassium_mcp_bootstrap.lua");
+const autoexecPath = fileURLToPath(new URL("../assets/potassium_mcp_autoexec.lua", import.meta.url));
+const bootstrapPath = fileURLToPath(new URL("../assets/potassium_mcp_bootstrap.lua", import.meta.url));
 
 test("autoexec loads the standalone bootstrap and retries only bounded failures", async () => {
   const source = await readFile(autoexecPath, "utf8");
@@ -45,6 +45,29 @@ test("bootstrap preserves Protocol 2 diagnostics and generic read-only capabilit
     /CoinBattle|World 3|TeleportService|queue_?on_teleport|PotassiumNextRuntime|approvalNonce/i,
   );
   assert.doesNotMatch(source, /HMAC_BLOCK_BYTES|base64ToBytes|writeHmacDiagnostic|protocol2-diagnostic/);
+});
+
+test("bootstrap bounds every unauthenticated connection cycle", async () => {
+  const source = await readFile(bootstrapPath, "utf8");
+
+  assert.match(source, /local CONNECTION_TIMEOUT_SECONDS = 10/);
+  assert.match(source, /local function startConnectionTimeout\(\)/);
+  assert.match(source, /task\.delay\(CONNECTION_TIMEOUT_SECONDS, function\(\)/);
+  assert.match(
+    source,
+    /state\.active = false\s+state\.socket = nil[\s\S]*state\.startupReason = "connection timed out"/,
+  );
+  assert.match(
+    source,
+    /state\.acknowledged = true\s+state\.connected = true\s+state\.reconnectAttempt = 0\s+cancelConnectionTimeout\(\)/,
+  );
+  assert.match(source, /local wasAcknowledged = state\.acknowledged/);
+  assert.match(source, /if wasAcknowledged then\s+startConnectionTimeout\(\)\s+end/);
+  assert.match(
+    source,
+    /if not isCurrent\(\) then\s+if ok and socketOrError then\s+pcall\(function\(\)\s+socketOrError:Close\(\)\s+end\)\s+end\s+return\s+end/,
+  );
+  assert.match(source, /else\s+startConnectionTimeout\(\)\s+task\.defer\(connect\)\s+end\s*$/);
 });
 
 test("standalone Lua sources have no legacy gameplay markers", async () => {

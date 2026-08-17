@@ -15,7 +15,15 @@ import {
 } from "./safe-read.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const configPath = process.env.POTASSIUM_MCP_CONFIG ?? resolve(here, "../config.json");
+export function commandConfigPath(argv = process.argv.slice(2)) {
+  const indices = argv.reduce((found, value, index) => value === "--config" ? [...found, index] : found, []);
+  if (indices.length === 0) return undefined;
+  if (indices.length !== 1) throw new Error("--config may be specified only once");
+  const index = indices[0];
+  if (index === argv.length - 1 || argv[index + 1].startsWith("--")) throw new Error("--config requires a path");
+  return resolve(argv[index + 1]);
+}
+const configPath = commandConfigPath() ?? process.env.POTASSIUM_MCP_CONFIG ?? resolve(here, "../config.json");
 const loopbackHosts = ["127.0.0.1", "::1"];
 
 export const configSchema = z.object({

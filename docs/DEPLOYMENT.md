@@ -1,25 +1,23 @@
 # Deployment
 
-Run `npm run deploy` from `potassium-mcp`, or use `tools/setup.ps1`. Deployment stages and transactionally replaces exactly two canonical scripts:
+Deploy and repair through the public installer, from the OMP project that owns the MCP configuration:
+
+```powershell
+npx --yes @mrketa/potassium-mcp@beta install
+npx --yes @mrketa/potassium-mcp@beta repair
+```
+
+The default installation root is `%LOCALAPPDATA%\Potassium\MCP`; the default workspace is `%LOCALAPPDATA%\Potassium\workspace`. Installation uses npm to place the exact runtime package in the stable application directory, keeps its configuration outside `node_modules`, creates or reuses the workspace token with restricted ACL, and transactionally installs these canonical assets:
 
 - `.potassium-mcp-bootstrap.lua` in the workspace
-- `potassium_mcp_autoexec.lua` in its autoexec directory
+- `potassium_mcp_autoexec.lua` in the workspace autoexec directory
 
-The deployment state records byte hashes and sizes. A failed activation restores prior managed artifacts. `npm run doctor` checks config/bootstrap parity, launcher parity, deployed script parity, and StyLua. `tools/uninstall.ps1` removes only artifacts proven by that state file.
+It safely merges only `mcpServers.potassium` into `<cwd>\.omp\mcp.json`. The launcher invokes the stable Node server with its stable `--config` path and a 30000 ms MCP timeout.
+
+Restart or reload the MCP host after deployment, then restart Potassium so the local server is already listening. Run `npx --yes @mrketa/potassium-mcp@beta doctor` for static deployment, launcher, and token-configuration diagnostics. Do not manually copy tokens or scripts to resolve an authentication failure; run `repair`.
 
 ## Publishing a release
 
-The GitHub Actions release workflow runs only for tags matching `v*`. The tag, `version.txt`, and `potassium-mcp/package.json` version must match exactly. For example:
+The release workflow installs locked dependencies, runs tests, verifies the release allowlist, creates and inspects the npm tarball, and publishes `@mrketa/potassium-mcp` publicly to npmjs with `npm publish --access public`. Publishing requires the repository `NPM_TOKEN` secret; there is no GitHub Packages registry or token path.
 
-```powershell
-git tag v0.7.0-beta.1
-git push origin v0.7.0-beta.1
-```
-
-The Windows runner installs locked dependencies, runs the full test suite, checks and packs the public allowlist, then publishes:
-
-- `celestial-potassium-mcp-v*-windows.zip`
-- the matching `.sha256` checksum
-- `RELEASE-EVIDENCE.json`
-
-Prerelease version strings such as `0.7.0-beta.1` create a GitHub prerelease. The packaged ZIP contains no generated local configuration, token, deployment state, diagnostics, or gameplay automation.
+A matching `v<version>` tag also produces verified GitHub release source assets, a checksum, and release evidence. Those assets are supplementary; end users install only with the npx command above.

@@ -32,12 +32,12 @@ test("selectPublicFiles accepts precisely manifest-listed regular files", async 
   assert.deepEqual(files.map(({ path: file }) => file), ["release-manifest.json", "src/main.js"]);
 });
 
-test("selectPublicFiles rejects unexpected and secret-bearing files", async (t) => {
+test("selectPublicFiles ignores unlisted repository files and rejects secret-bearing release files", async (t) => {
   const root = await fixture({ "src/main.js": "export const safe = true;\n" });
   t.after(() => rm(root, { recursive: true, force: true }));
   await writeFile(path.join(root, "unexpected.js"), "do not publish\n");
-  await assert.rejects(selectPublicFiles(root), /Unexpected public-release files/);
-  await rm(path.join(root, "unexpected.js"));
+  const files = await selectPublicFiles(root);
+  assert.deepEqual(files.map(({ path: file }) => file), ["release-manifest.json", "src/main.js"]);
   await writeFile(path.join(root, "src/main.js"), `export const config = { "token": "${"1".repeat(32)}" };\n`);
   await assert.rejects(selectPublicFiles(root), /Potential secret literal/);
 });

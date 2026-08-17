@@ -1,7 +1,7 @@
 # Security Policy
 
-Report suspected vulnerabilities privately to the repository maintainers. Include a minimal reproduction, impact, affected version, and any relevant logs with secrets removed.
+The Potassium MCP bridge is intentionally loopback-only, mutually authenticated, and read-only. Do not include bridge tokens, private artifact contents, or local configuration in issues.
 
-The bridge is intentionally local and bounded: Protocol 2 mutual authentication, loopback-only transport, request-size/time limits, FIFO ownership, and redacted read-only tools are security boundaries. Do not report gameplay automation requests as feature proposals; that capability is intentionally absent.
+If a token may be exposed, remove only the token through the supported recovery path and run `npx --yes @mrketa/potassium-mcp repair` from the OMP project. Do not copy tokens into chat, issue trackers, or MCP configuration by hand, and do not weaken the token ACL.
 
-Never include bridge tokens or private artifact contents in issues. Rotate a suspected token by removing it and rerunning `tools/setup.ps1`.
+Report vulnerabilities privately to the maintainers with a minimal reproduction and impact description.

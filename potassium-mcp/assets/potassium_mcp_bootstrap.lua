@@ -13,6 +13,7 @@ local MAX_REQUEST_ID_BYTES = 256
 local RECONNECT_BASE_DELAY_SECONDS = 1
 local RECONNECT_MAX_DELAY_SECONDS = 30
 local HANDSHAKE_TIMEOUT_SECONDS = 5
+local CONNECTION_TIMEOUT_SECONDS = 10
 
 local MAX_SNAPSHOT_PROPERTIES = 16
 local MAX_SNAPSHOT_ATTRIBUTES = 32
@@ -158,6 +159,7 @@ local state = {
 	startupReason = startupReason,
 	reconnectScheduled = false,
 	reconnectAttempt = 0,
+	connectionTimeoutGeneration = 0,
 	inFlightRequests = 0,
 	activeRequestIds = {},
 }
@@ -174,6 +176,36 @@ _G.PotassiumMcp = state
 
 local function isCurrent()
 	return state.active and _G.PotassiumMcpGeneration == generation and _G.PotassiumMcp == state
+end
+
+local function startConnectionTimeout()
+	state.connectionTimeoutGeneration = state.connectionTimeoutGeneration + 1
+	local timeoutGeneration = state.connectionTimeoutGeneration
+	task.delay(CONNECTION_TIMEOUT_SECONDS, function()
+		if not isCurrent() or state.acknowledged or state.connectionTimeoutGeneration ~= timeoutGeneration then
+			return
+		end
+
+		local socket = state.socket
+		state.active = false
+		state.socket = nil
+		state.connected = false
+		state.acknowledged = false
+		state.handshake = nil
+		state.handshakeGeneration = state.handshakeGeneration + 1
+		state.startupStatus = "disabled"
+		state.startupReason = "connection timed out"
+		warn("[Potassium MCP] Disabled: connection timed out")
+		if socket then
+			pcall(function()
+				socket:Close()
+			end)
+		end
+	end)
+end
+
+local function cancelConnectionTimeout()
+	state.connectionTimeoutGeneration = state.connectionTimeoutGeneration + 1
 end
 
 local function safeProperty(instance, property)
@@ -2069,6 +2101,7 @@ local function handleMessage(socket, rawMessage)
 			state.acknowledged = true
 			state.connected = true
 			state.reconnectAttempt = 0
+			cancelConnectionTimeout()
 			state.startupStatus = "active"
 			state.startupReason = nil
 		end
@@ -2158,6 +2191,14 @@ connect = function()
 	end
 
 	local ok, socketOrError = pcall(webSocketConnect, ENDPOINT)
+	if not isCurrent() then
+		if ok and socketOrError then
+			pcall(function()
+				socketOrError:Close()
+			end)
+		end
+		return
+	end
 	if not ok then
 		state.connected = false
 		state.acknowledged = false
@@ -2181,6 +2222,7 @@ connect = function()
 		end
 	end)
 	socket.OnClose:Connect(function()
+		local wasAcknowledged = state.acknowledged
 		if isCurrent() and state.socket == socket then
 			state.socket = nil
 			state.connected = false
@@ -2189,6 +2231,9 @@ connect = function()
 			state.handshakeGeneration = state.handshakeGeneration + 1
 			state.startupStatus = "connection_unavailable"
 			state.startupReason = "connection closed"
+			if wasAcknowledged then
+				startConnectionTimeout()
+			end
 			scheduleReconnect()
 		end
 	end)
@@ -2270,5 +2315,6 @@ elseif not cryptoAvailable then
 elseif type(webSocketConnect) ~= "function" then
 	warn("[Potassium MCP] Disabled: WebSocket.connect is unavailable")
 else
+	startConnectionTimeout()
 	task.defer(connect)
 end

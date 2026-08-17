@@ -1,48 +1,20 @@
 import { createHash } from "node:crypto";
-import { cp, lstat, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { cp, lstat, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const projectRoot = path.resolve(here, "..");
 const outputRoot = path.join(projectRoot, "release-out", "public");
-const excludedTopLevel = new Set([".git", ".github", ".omp", ".planning", ".potassium-rollback", "archive", "graphify-out", "node_modules", "release-out", "workspace"]);
-const excludedFiles = new Set(["ARCHITECTURE.md", "OPERATIONS.md", "DEPLOY_STATE.json", "LIVE_STATE.json", "HANDOFF.md", "start-omp.ps1", "potassium-mcp/config.json"]);
-const excludedSuffixes = [".log", ".tmp", ".cache", ".ndjson"];
 
 export function portableRelative(from, target) {
   const relative = path.relative(from, target);
   if (!relative || path.isAbsolute(relative) || relative.split(path.sep).includes("..")) throw new Error(`Path escapes its base: ${target}`);
   return relative.split(path.sep).join("/");
 }
-
 const sha256 = (content) => createHash("sha256").update(content).digest("hex");
-const isExcluded = (relative) => {
-  const parts = relative.split("/");
-  return excludedTopLevel.has(parts[0])
-    || parts.includes("node_modules")
-    || excludedFiles.has(relative)
-    || relative.startsWith("scripts/matcha_publish/")
-    || relative.startsWith("scripts/") && relative.endsWith(".txt")
-    || excludedSuffixes.some((suffix) => relative.endsWith(suffix));
-};
 
-async function walk(root, relative = "") {
-  const directory = path.join(root, relative);
-  const entries = await readdir(directory, { withFileTypes: true });
-  const files = [];
-  for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
-    const child = relative ? `${relative}/${entry.name}` : entry.name;
-    const full = path.join(root, child);
-    const info = await lstat(full);
-    if (info.isSymbolicLink()) throw new Error(`Symlink is not permitted in a public release: ${child}`);
-    if (isExcluded(child)) continue;
-    if (info.isDirectory()) files.push(...await walk(root, child));
-    else if (info.isFile()) files.push(child);
-    else throw new Error(`Unsupported filesystem entry in public release: ${child}`);
-  }
-  return files;
-}
+
 
 function assertSafeContent(relative, content) {
   const absolutePath = /(?:^|[\s"'=(])(?:[A-Za-z]:[\\/](?![<>])|\\\\[A-Za-z0-9._-]+[\\/]|\/(?:home|Users|root|tmp)\/[A-Za-z0-9_.-]+)/m;
@@ -69,16 +41,16 @@ export async function loadReleaseManifest(root = projectRoot) {
 
 export async function selectPublicFiles(root = projectRoot) {
   const { files } = await loadReleaseManifest(root);
-  const actual = await walk(root);
-  const expected = new Set(files);
-  const missing = files.filter((file) => !actual.includes(file));
-  const unexpected = actual.filter((file) => !expected.has(file));
-  if (missing.length) throw new Error(`Release manifest files are missing: ${missing.join(", ")}`);
-  if (unexpected.length) throw new Error(`Unexpected public-release files: ${unexpected.join(", ")}`);
   const records = [];
   for (const relative of files) {
     const full = path.join(root, relative);
-    const info = await lstat(full);
+    let info;
+    try {
+      info = await lstat(full);
+    } catch (error) {
+      if (error.code === "ENOENT") throw new Error(`Release manifest file is missing: ${relative}`);
+      throw error;
+    }
     if (!info.isFile() || info.isSymbolicLink()) throw new Error(`Release file must be a regular file: ${relative}`);
     const content = await readFile(full);
     assertSafeContent(relative, content.toString("utf8"));

@@ -1,16 +1,33 @@
 {
-  "name": "celestial-potassium-mcp",
-  "version": "0.7.0-beta.1",
-  "private": true,
+  "name": "@mrketa/potassium-mcp",
+  "version": "0.8.0-beta.1",
+  "private": false,
   "type": "module",
-  "description": "Local MCP-to-Potassium WebSocket bridge",
-  "main": "src/server.js",
+  "description": "Local, read-only Potassium MCP bridge",
+  "bin": {
+    "potassium-mcp": "bin/potassium-mcp.js"
+  },
+  "files": [
+    "assets/",
+    "bin/",
+    "src/",
+    "config.example.json",
+    "LICENSE",
+    "README.md"
+  ],
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mrketa/celestial-potassium-mcp.git"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "scripts": {
-    "start": "node src/server.js",
-    "deploy": "node src/deploy.js",
-    "doctor": "node src/doctor.js",
     "release:check": "node ../tools/release.mjs check",
     "release:pack": "node ../tools/release.mjs pack",
+    "release:publish": "node release-publish.js",
     "test": "node --test --test-concurrency=1"
   },
   "dependencies": {

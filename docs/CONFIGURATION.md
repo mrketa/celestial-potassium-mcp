@@ -1,5 +1,7 @@
 # Configuration
 
-Copy `potassium-mcp/config.example.json` to `config.json`, or use `tools/setup.ps1`. Keep `host` loopback-only and make `tokenFile` point to the token read by the bootstrap. `artifactRoots` contains one generic bounded root; add only paths you explicitly intend the safe artifact reader to expose. `httpAllowedHosts` is an allowlist for HTTPS reads.
+`npx --yes @mrketa/potassium-mcp@beta install` writes stable configuration beneath `%LOCALAPPDATA%\Potassium\MCP`, outside `node_modules`. Do not copy `config.example.json` over that configuration or manually change the generated token path.
 
-Request and message limits are defensive boundaries. Do not place secrets in artifacts.
+The bridge remains loopback-only. Its token must be shared only by the stable MCP configuration and the deployed bootstrap; installer and repair preserve restricted ACLs. `artifactRoots` and `httpAllowedHosts` are explicit bounded allowlists. Add entries only when you intentionally want that data exposed through the read-only bridge.
+
+Use `--workspace`, `--install-root`, and `--mcp-config` to select non-default paths. Use `doctor --json` to inspect the effective configuration without printing secret material.

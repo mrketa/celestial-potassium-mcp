@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -25,8 +26,10 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: potassium-mcp/package-lock.json
+          registry-url: https://registry.npmjs.org/
 
       - name: Verify tag and project versions
+        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
         shell: pwsh
         run: |
           $packageVersion = (Get-Content potassium-mcp/package.json -Raw | ConvertFrom-Json).version
@@ -45,18 +48,58 @@ jobs:
       - name: Run tests
         run: npm --prefix potassium-mcp test
 
-      - name: Build verified public package
+      - name: Run release tooling tests
+        run: node --test tools/release.test.mjs
+
+      - name: Verify release source
+        run: npm --prefix potassium-mcp run release:check
+
+      - name: Pack and inspect npm tarball
+        shell: pwsh
         run: |
-          npm --prefix potassium-mcp run release:check
-          npm --prefix potassium-mcp run release:pack
+          $pack = npm --prefix potassium-mcp pack --json | ConvertFrom-Json
+          if ($pack.Count -ne 1) { throw "npm pack did not produce exactly one tarball" }
+          $tarball = Join-Path $PWD "potassium-mcp/$($pack[0].filename)"
+          if (-not (Test-Path -LiteralPath $tarball)) { throw "npm pack tarball was not created" }
+          $contents = @(& tar -tf $tarball)
+          $required = @(
+            "package/package.json",
+            "package/README.md",
+            "package/LICENSE",
+            "package/bin/potassium-mcp.js",
+            "package/src/install.js",
+            "package/src/deploy.js",
+            "package/src/doctor.js",
+            "package/src/server.js",
+            "package/src/bridge.js",
+            "package/src/safe-read.js",
+            "package/assets/potassium_mcp_bootstrap.lua",
+            "package/assets/potassium_mcp_autoexec.lua"
+          )
+          $missing = $required | Where-Object { $_ -notin $contents }
+          if ($missing) { throw "Tarball is missing required runtime files: $($missing -join ', ')" }
+          $forbidden = $contents | Where-Object { $_ -match '^package/(test|docs)/' }
+          if ($forbidden) { throw "Tarball contains non-runtime files: $($forbidden -join ', ')" }
+          Remove-Item -LiteralPath $tarball -Force
+
+      - name: Publish MCP package to npmjs
+        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm --prefix potassium-mcp run release:publish
+
+      - name: Build verified GitHub release assets
+        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+        run: npm --prefix potassium-mcp run release:pack
 
       - name: Create ZIP and checksum
+        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
         id: assets
         shell: pwsh
         run: |
           Add-Type -AssemblyName System.IO.Compression.FileSystem
           $tag = "${{ github.ref_name }}"
-          $archiveName = "celestial-potassium-mcp-$tag-windows.zip"
+          $archiveName = "potassium-mcp-$tag-windows.zip"
           $archivePath = Join-Path $PWD "release-out/$archiveName"
           [System.IO.Compression.ZipFile]::CreateFromDirectory(
             (Join-Path $PWD "release-out/public"),
@@ -76,6 +119,7 @@ jobs:
           "checksum=$checksumName" >> $env:GITHUB_OUTPUT
 
       - name: Publish GitHub Release
+        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
